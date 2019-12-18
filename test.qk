@@ -1,0 +1,298 @@
+asdfd < < = <-> ->
+asdfs //! Hello
+asdf /*! asdf */
+324532 ++
+asdf <<= /=
+module
+🚀
+6'so77
+'h1934994df
+'\n'
+
+module {
+
+::
+.
+?
+}
+
+/*
+Quark Type Documentation (*.qk):
+
+Quark supports various types for vectors/arrays/aliases/enums/structs/composite 
+types
+
+This does not support unions since they really don't behave well in hardware
+(I don't like them in C either)
+*/
+
+// ----------------- Bit Vectors ----------------- 
+
+// Quark starts off with the bit type with the same indexing as SystemVerilog
+// Unknown/undriven logic states are handled outside of the type system,
+// so it does not otherwise support unknown/undriven states.
+bit [9:0] my_variable1;
+
+// Note that variable orderings can skip bits just like SV
+// You cannot however reverse the highest and lowest number
+bit [9:2] my_variable2; // bit [2:9] would be invalid
+
+// Unlike SV you can simply declare the number of bits
+bit [10] my_variable3; // identical to my_variable1
+
+// You can also declare types as signed (read docs on operators)
+signed bit [8] my_variable_signed;
+
+// Binary constants work exactly the same way as SV (I'm just keeping some
+// small things consistent)
+bit [8] my_variable4 = 8'h30;
+
+// Assignments to bit vectors can be done using concatenations using {}
+bit [8] my_variable_concat = {4'b1, 4'hf};
+
+// Assignments to bit vector must be the same size but can be resized
+bit [8] my_variable_assign_bad = {3'b1, 3'h7, 3'h2}; // Fails
+bit [8] my_variable_assign_good = {3'b1, 3'h7, 3'h2}[8:1]; // Good
+
+// You can ask the width of bit-vectors, it will return a bit [32]
+bit [21] my_width_variable;
+bit [32] found_width = width(my_width_variable);
+
+// "Null" bit vectors are supported, this is useful sometimes to handle
+// parameter support where a bus may not be used in some configurations
+// Cannot be indexed into and combined with compatible operators it is defined
+// as zero
+bit [0] my_null_variable;
+
+// All three of these are the same and are treated by the compiler as identical
+bit a;
+bit [1] b;
+bit [0:0] c;
+
+// Multidimensional bit vectors are not supported (wait for arrays)
+// bit [4:0][3:0] bad_variable; // honestly which index comes 'first'?
+
+// ----------------- Bit Arrays -----------------
+
+// Array bounds are required to be a single size variable (what does skipping
+// array indices even help with?) but they can be zero as well (a single zero
+// effectively means the array isn't there, but the other indices can still be
+// indexed through)
+bit [7:0] my_array1 [4];
+bit [7:0] my_null_array [0];
+
+// Array bounds can be multidimensional, where the first index on the line
+// is the first one that you access (technically this makes it the 
+// most-significant index) 
+bit [7:0] my_multidim_array1 [8][4];
+
+// Assignments to bit vectors are done a little differently than SV, using []
+bit [8] my_defined_array [2] = [8'h0, {4'h1, 4'hE}];
+
+// Like bit-vectors, assignments from arrays of different sizes will throw an
+// error
+
+// You can also ask the size of an array as short hand (will return the most
+// significant size first) and the size is a 32-bit bit vector
+bit [7:0] my_multidim_array2 [8][9];
+bit [32] msb_size = length(my_multidim_array2); // Should be 8
+         msb_size = length(my_multidim_array2, 0); // Just more explicit
+
+// It also supports shorthand to find the size of subarrays
+bit [32] lsb_size = length(my_multidim_array2, 1); // Should be 9
+
+// You can also ask the width of a multi-dimension array, it simply returns
+// the underlying bit-vector width, regardless of the array dimensions
+bit [32] array_width = width(my_multidim_array2);
+
+// When you are especially worried about overflow and underflow, you can use
+// the safe qualifier, where addition and subtraction must be assigned to
+// variables with a bit-width one greater, so that overflow/underflow
+// can be specifically checked for. It also requires that the base index of the
+// bit-vectors must be zero, i.e. you cannot write 'safe bit [8:2]' 
+safe bit [8] unsigned_safe_bit;
+safe signed bit [8] signed_safe_bit;
+
+// TODO: Describe all the array and vector indexing operators supported
+
+// ----------------- Typedefs -----------------
+
+// You can define a name for any other type (debating if the tool will throw 
+// a warning if you forgot the _t)
+typedef bit [8] uint8_t;
+typedef bit [16] uint16_t;
+typedef bit [32] uint32_t;
+typedef bit [64] uint64_t;
+
+typedef signed bit [8] int8_t;
+typedef signed bit [16] int16_t;
+typedef signed bit [32] int32_t;
+typedef signed bit [64] int64_t;
+
+// If you want to define a new type around an array you can separate the vector
+// and array indices
+typedef bit [8]:[16][16] two_dim_array_of_256_bytes_t;
+typedef bit :[16][16] two_dim_array_of_256_bits_t;
+
+// If you are defining an array of a non-bit type you cannot define the vector
+// indices (since 2d vector indices are not allowed) but you still need the 
+// colon for clarity
+typedef uint8_t :[16] one_dim_array_of_16_bytes_t;
+
+// When assigning between a defined type and its base type you do not have
+// to cast, assuming the types match
+bit [8] stuff = 8'hff;
+uint8_t other_stuff = stuff; // no casting needed
+
+// You can however define a strict typedef in which casting would be required
+typedef strict bit [8] strict_uint8_t;
+bit [8] stuff = 8'hff;
+// Note the widths still have to match, you need to pad otherwise
+strict_uint8_t other_stuff = (strict_uint8_t) stuff; // casting needed
+
+// typedefs also accept template arguments
+typedef<W> bit [W] something_template_t;
+something_template_t<W> some_something;
+
+// ----------------- Structs -----------------
+
+// Honestly this is just simplifying the syntax from C and SV, defining a 
+// "use-once and in-place" struct is stupid anyways
+struct stuff_t {
+    signed bit [8] a_byte;
+    bit [8] another_byte;
+} // no semicolon needed here
+
+// You can put arrays or other structs inside a struct
+struct more_stuff_t {
+    stuff_t a_bunch_of_stuff [8]; // An array of structs
+}
+
+// Structs can be explicitly initialized like follows
+stuff_t s = {a_byte: 8'sh8, another_byte: 'h5};
+
+// ----------------- Enums -----------------
+
+// The type declaration of the enum has to be a bit vector or a typedef of 
+// a bit vector (no arrays)
+enum bit my_enum_t {
+    OFF = 'h0,
+    ON = 'h1, // You can have a trailing comment if you want (mindblown)
+}
+
+// Debating if the compiler throws a warning for enum fields that aren't 
+// capitalized
+enum uint8_t my_byte_enum_t {
+    ONE = 'h1,
+    BIG = 'h255,
+    // You do not have to define fields for all of the enum combinations
+}
+
+// Enum fields are accessed hierarchically (enum namespace pollution is a 
+// real problem in verilog)
+my_byte_enum_t my_var0 = my_byte_enum_t.ONE;
+
+// You could list out all valid enum values to check if an enum exists in a 
+// valid state, but you can also use the undef function (if your enum does
+// not list out all valid states)
+bit test = undef(my_var0); // Should this come from a standard???
+
+// You can define an enum without explicit values and it is defined that they 
+// start at zero and keep incrementing
+enum uint8_t my_default_enum_t {
+    ZERO, ONE, TWO, THREE, FOUR
+}
+
+// Assignments between enums and their base types require the use of casting
+// but the width's must match just like bit-vector assignments
+my_default_enum_t test_cast = (my_default_enum_t) 8'h7;
+
+// If you cast a same-size enum to and from its base type it will preserve the
+// bits even if the enum does not enumerate all the possible combinations
+uint8_t test1 = 'h7;
+my_default_enum_t test2 = (my_default_enum_t) test1;
+uint8_t test3 = (uint8_t) test1; // Will have same values
+
+// You cannot use a strict typedef as the base type for an enum
+
+// ----------------- Struct/Typedef Parameterization -----------------
+
+// You can list parameters to a struct, where these parameters can allow for 
+// "generic/templated" versions of the type
+struct stuff_t<W, T> {
+    signed bit [W] a_byte; // W implicitly must be a bit-vector
+    T abstract_stuff; // T must implicitly be a type
+}
+
+// Parameters can also be restricted to a specific type or declaration of
+// a type
+struct stuff_explicit_t<W: bit [4], W2: bit [], T: type> {
+    bit [W] binary_stuff; // W explicitly must be a bit-vector of 4-bits
+    bit [W2] more_binary_stuff; // W2 explicitly must be a bit-vector
+    T struct_stuff; // T must explicitly be a type
+}
+
+// Type parameters can further be restricted to specific types. Here T is
+// available in the struct body, but cannot be used in the type restriction
+// since that would be a recursive definition. Likewise W is a type placeholder
+// that was not already defined as a top level, so it can be used as the lower
+// type restriction. The bit vector simply requires that an given definition of
+// T requires that its T template argument is a bit [32]
+struct stuff_explicit_type_t<T: type stuff_t<W, bit [32]>> {
+    T restricted_stuff;
+}
+
+// This type would be declared as such
+stuff_explicit_type_t<stuff_t<12, bit [32]>> my_stuff;
+
+// You can also nest enums/typedefs/structs hierarchically, if you want to share
+// generic parameters among multiple types
+struct nested_types_struct_t<W> {
+    bit [W] binary_stuff;
+
+    typedef bit [W*2] custom_t; // You cannot add extra template variables here
+}
+
+// Where you can declare types as follows
+nested_types_struct_t<42> my_struct;
+nested_types_struct_t<42>.custom_t my_field;
+typedef nested_types_struct_t<42>.custom_t custom_def_t; // typedef it too
+custom_def_t my_custom_def;
+
+// -------------- Struct Inheritance ---------------------
+
+// Structs can inherit from other structs, but the inherited struct needs to be
+// declared as abstract and this only supports single inheritance. Also, there
+// are no public/private distinctions and fields cannot be overriden or masked.
+// You can also use an abstract struct normally, there is no way to restrict
+// this, in hardware that doesn't really make a lot of sense.
+
+abstract struct my_abstract_t {
+    bit [4] parent_stuff;    
+}
+
+struct my_concrete_t : my_abstract_t {
+    bit [4] child_stuff;
+}
+
+my_abstract_t abs_st; // You can access parent_stuff only
+my_concrete_t con_st; // You can access parent_stuff and child_stuff
+
+// I am really torn on these semantics, specifically how assignments
+// work with loss of generality or specificity. It probably needs a restricted
+// type parameter when it is used
+
+/*
+// Any abstract struct also has an implicit field 'meta' and associated 'meta_t'
+// type that contains all the child struct contents, assuming that the struct 
+// has been passed around
+
+// Find width manually
+parameter bit [32] W = width(abs_st.meta);
+bit [W] meta_data = abs_st.meta;
+
+// Rely on built in 
+abs_st.meta_t meta_data_def = abs_st.meta;
+*/
+
+
