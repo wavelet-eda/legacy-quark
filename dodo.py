@@ -19,7 +19,18 @@ except FileExistsError:
     pass
 
 
-def task_lexer():
+def task_quark():
+    ''' Build the quark class '''
+
+    global BUILD_DIR
+
+    return {
+        'file_dep' : ['Quark.cpp', 'Quark.h'],
+        'targets' : ['%sQuark.o' % (BUILD_DIR)],
+        'actions' : ['g++ -std=c++17 -g -c Quark.cpp -o %sQuark.o' % (BUILD_DIR)],
+    }
+
+def task_quark_lexer():
     ''' Build the lexer class '''
 
     global BUILD_DIR
@@ -30,17 +41,32 @@ def task_lexer():
         'actions' : ['g++ -std=c++17 -g -c QuarkLexer.cpp -o %sQuarkLexer.o' % (BUILD_DIR)],
     }
 
+def task_quark_parser():
+    ''' Build the parser class '''
+
+    global BUILD_DIR
+
+    return {
+        'file_dep' : ['QuarkParser.cpp', 'QuarkParser.h'],
+        'targets' : ['%sQuarkParser.o' % (BUILD_DIR)],
+        'actions' : ['g++ -std=c++17 -g -c QuarkParser.cpp -o %sQuarkParser.o' % (BUILD_DIR)],
+    }
+
 def task_main():
     ''' Build the main function '''
 
     global EXEC_EXT, BUILD_DIR
 
     exec_file = '%smain_lexer%s' % (BUILD_DIR, EXEC_EXT)
+    quark_o = '%sQuark.o' % (BUILD_DIR)
+    quark_lexer_o = '%sQuarkLexer.o' % (BUILD_DIR)
+    quark_parser_o = '%sQuarkParser.o' % (BUILD_DIR)
 
     return {
-        'file_dep' : ['main.cpp', '%sQuarkLexer.o' % (BUILD_DIR)],
+        'file_dep' : ['main.cpp', quark_o, quark_lexer_o, quark_parser_o],
         'targets' : [exec_file],
-        'actions' : ['g++ -std=c++17 main.cpp %sQuarkLexer.o -g -o %s -lgmp -lgmpxx' % (BUILD_DIR, exec_file)],
+        'actions' : ['g++ -std=c++17 %s %s %s main.cpp -g -o %s -lgmp -lgmpxx' % (
+            quark_o, quark_lexer_o, quark_parser_o, exec_file)],
     }
 
 

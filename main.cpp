@@ -2,9 +2,12 @@
 #include <fstream>
 #include <string>
 
+#include "Quark.h"
 #include "QuarkLexer.h"
 
-std::string get_symbol_str(QuarkLexerSymbol sym) {
+using namespace Quark;
+
+std::string get_symbol_str(QuarkSymbol sym) {
 
     if ((uint8_t) sym >= 32 and (uint8_t) sym < 128) {
         std::string result;
@@ -12,34 +15,34 @@ std::string get_symbol_str(QuarkLexerSymbol sym) {
         return result;
     } else {
         switch (sym) {
-            case QuarkLexerSymbol::BITWISE_NAND: return "~&";
-            case QuarkLexerSymbol::BITWISE_NOR: return "~|";
-            case QuarkLexerSymbol::BITWISE_XNOR: return "~^";
-            case QuarkLexerSymbol::LSHIFT: return "<<";
-            case QuarkLexerSymbol::RSHIFT: return ">>";
-            case QuarkLexerSymbol::ADDITION_ASSIGN: return "+=";
-            case QuarkLexerSymbol::SUBTRACTION_ASSIGN: return "-=";
-            case QuarkLexerSymbol::MULTIPLICATION_ASSIGN: return "*=";
-            case QuarkLexerSymbol::DIVISION_ASSIGN: return "/=";
-            case QuarkLexerSymbol::MODULUS_ASSIGN: return "%=";
-            case QuarkLexerSymbol::BITWISE_AND_ASSIGN: return "&=";
-            case QuarkLexerSymbol::BITWISE_OR_ASSIGN: return "|=";
-            case QuarkLexerSymbol::BITWISE_XOR_ASSIGN: return "^=";
-            case QuarkLexerSymbol::LSHIFT_ASSIGN: return "<<=";
-            case QuarkLexerSymbol::RSHIFT_ASSIGN: return ">>=";
-            case QuarkLexerSymbol::COND_AND: return "&&";
-            case QuarkLexerSymbol::COND_OR: return "||";
-            case QuarkLexerSymbol::COND_IMPLICATION: return "->";
-            case QuarkLexerSymbol::COND_EQUIVALENCE: return "<->";
-            case QuarkLexerSymbol::LESS_EQUAL: return "<=";
-            case QuarkLexerSymbol::GREATER_EQUAL: return ">=";
-            case QuarkLexerSymbol::EQUAL: return "==";
-            case QuarkLexerSymbol::NOT_EQUAL: return "!=";
-            case QuarkLexerSymbol::INCREMENT: return "++";
-            case QuarkLexerSymbol::DECREMENT: return "--";
-            case QuarkLexerSymbol::DOUBLE_COLON: return "::";
-            case QuarkLexerSymbol::LINE_COMMENT: return "//";
-            case QuarkLexerSymbol::BLOCK_COMMENT: return "/*";
+            case QuarkSymbol::BITWISE_NAND: return "~&";
+            case QuarkSymbol::BITWISE_NOR: return "~|";
+            case QuarkSymbol::BITWISE_XNOR: return "~^";
+            case QuarkSymbol::LSHIFT: return "<<";
+            case QuarkSymbol::RSHIFT: return ">>";
+            case QuarkSymbol::ADDITION_ASSIGN: return "+=";
+            case QuarkSymbol::SUBTRACTION_ASSIGN: return "-=";
+            case QuarkSymbol::MULTIPLICATION_ASSIGN: return "*=";
+            case QuarkSymbol::DIVISION_ASSIGN: return "/=";
+            case QuarkSymbol::MODULUS_ASSIGN: return "%=";
+            case QuarkSymbol::BITWISE_AND_ASSIGN: return "&=";
+            case QuarkSymbol::BITWISE_OR_ASSIGN: return "|=";
+            case QuarkSymbol::BITWISE_XOR_ASSIGN: return "^=";
+            case QuarkSymbol::LSHIFT_ASSIGN: return "<<=";
+            case QuarkSymbol::RSHIFT_ASSIGN: return ">>=";
+            case QuarkSymbol::COND_AND: return "&&";
+            case QuarkSymbol::COND_OR: return "||";
+            case QuarkSymbol::COND_IMPLICATION: return "->";
+            case QuarkSymbol::COND_EQUIVALENCE: return "<->";
+            case QuarkSymbol::LESS_EQUAL: return "<=";
+            case QuarkSymbol::GREATER_EQUAL: return ">=";
+            case QuarkSymbol::EQUAL: return "==";
+            case QuarkSymbol::NOT_EQUAL: return "!=";
+            case QuarkSymbol::INCREMENT: return "++";
+            case QuarkSymbol::DECREMENT: return "--";
+            case QuarkSymbol::DOUBLE_COLON: return "::";
+            case QuarkSymbol::LINE_COMMENT: return "//";
+            case QuarkSymbol::BLOCK_COMMENT: return "/*";
             default: return "";
         }
     }
@@ -52,15 +55,15 @@ int main(int argc, char const *argv[])
     std::ifstream myfile ("test.qk", std::ios::binary);
 
     QuarkLexer l(myfile);
-    l.lex([](QuarkLexerToken token) {
+    l.lex([](QuarkToken token) {
         switch (token.type) {
-            case QuarkLexerTokenType::KEYWORD:
+            case QuarkTokenType::KEYWORD:
                 std::cout << "Keyword:: " << token.id << '\n';
                 break;
-            case QuarkLexerTokenType::IDENTIFIER:
+            case QuarkTokenType::IDENTIFIER:
                 std::cout << "Identifier:: " << token.id << '\n';
                 break;
-            case QuarkLexerTokenType::NUMBER:
+            case QuarkTokenType::NUMBER:
                 std::cout << "Number:: Base: " << token.num.base << 
                         ", Signed: " << token.num.is_signed << 
                         ", Ambiguous: " << token.num.is_ambiguous << 
@@ -68,13 +71,13 @@ int main(int argc, char const *argv[])
                         ", Value: " << token.num.num.get_str() <<  
                         '\n';
                 break;
-            case QuarkLexerTokenType::SYMBOL:
+            case QuarkTokenType::SYMBOL:
                 std::cout << "Symbol:: " << get_symbol_str(token.symbol) << '\n';
                 break;
-            case QuarkLexerTokenType::STRING:
+            case QuarkTokenType::STRING:
                 std::cout << "String::" << '\n';
                 break;
-            case QuarkLexerTokenType::DOC_COMMENT:
+            case QuarkTokenType::DOC_COMMENT:
                 std::cout << "Doc Comment:: " << token.str << '\n';
                 break;
         }
