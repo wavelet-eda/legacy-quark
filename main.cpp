@@ -1,6 +1,8 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <chrono> 
+#include <ctime>
 
 #include "Quark.h"
 #include "QuarkLexer.h"
@@ -52,7 +54,10 @@ int main(int argc, char const *argv[])
 {
     std::cout << "Reading file...\n\n";
 
-    std::ifstream myfile ("test.qk", std::ios::binary);
+
+    auto start_time = std::chrono::high_resolution_clock::now();
+
+    std::ifstream myfile (argv[1], std::ios::binary);
 
     QuarkLexer l(myfile);
     l.lex([](QuarkToken token) {
@@ -82,6 +87,16 @@ int main(int argc, char const *argv[])
                 break;
         }
     });
+
+    // auto duration = ;
+
+    auto ms = 
+            std::chrono::duration_cast<
+            std::chrono::microseconds>(
+            std::chrono::high_resolution_clock::now() - start_time);
+    // std::time_t duration_t = std::chrono::system_clock::to_time_t(duration);
+
+    std::cout << ms.count() << '\n';
 
     // std::cout << "\xF0\x9F\x98\x81" << '\n';
     // QuarkLexerNumber num;

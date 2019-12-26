@@ -37,11 +37,15 @@ namespace Quark {
 
     class QuarkParser {
     private:
+        std::set<std::string> keyword_lookup;
 
     public:
 
         QuarkParser();
         ~QuarkParser() {};
-        QuarkNode parse();
+        QuarkNode parse(std::vector<QuarkToken> tokens);
+        QuarkNode parse(QuarkNode starting_node, std::vector<QuarkToken> tokens);
+
+        std::string get_keyword(size_t id) { return *std::next(keyword_lookup.begin(), id); }
     };
 }

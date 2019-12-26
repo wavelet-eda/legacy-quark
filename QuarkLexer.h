@@ -44,9 +44,7 @@ namespace Quark {
     private:
         std::istream& in;
         std::string current_line;
-        size_t current_row; // Rows are zero-indexed where line numbers are one-indexed
-        size_t current_col;
-        unsigned int utf_bytes_remaining;
+        size_t current_row, current_col; // Both of these are zero-indexed
 
         std::vector<std::string> identifiers;
         std::vector<QuarkToken> tokens;
@@ -77,16 +75,6 @@ namespace Quark {
                 size_t line, size_t column);
         void process_block_comment(std::function<void(QuarkToken)> token_parser,
                 size_t line, size_t column);
-
-        const std::string QUARK_KEYWORDS [33] = {
-            "quark", "import", "module", "parameter", "fixed", "input", "output", 
-            "reg", "latch", "future", "function", "return", 
-            "bit", "signed", "unsigned", "safe", 
-            "overflow", "concat", "clog2", "width", "length", "resize", "cast", 
-            "struct", "typedef", "enum", 
-            "channel", "interface", 
-            "if", "else", "for", "break", "continue"
-        };
 
     public:
 

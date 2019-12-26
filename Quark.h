@@ -13,7 +13,7 @@
 
 namespace Quark {
 
-    // extern const std::string QUARK_KEYWORDS [33];
+    std::set<std::string> get_quark_keywords();
 
     const char QUARK_ASCII_VT = 11;
     const char QUARK_ASCII_FF = 12;
@@ -28,35 +28,35 @@ namespace Quark {
         DIVISION = '/', 
         MODULUS = '%',
         BITWISE_AND = '&', 
-        BITWISE_NAND = 128, 
-        BITWISE_OR = '|', 
-        BITWISE_NOR = 129, 
+        BITWISE_NAND = 128, // ~&
+        BITWISE_OR = '|',
+        BITWISE_NOR = 129, // ~|
         BITWISE_XOR = '^', 
-        BITWISE_XNOR = 130,
-        LSHIFT = 131, 
-        RSHIFT = 132,
-        ADDITION_ASSIGN = 133, 
-        SUBTRACTION_ASSIGN = 134, 
-        MULTIPLICATION_ASSIGN = 135, 
-        DIVISION_ASSIGN = 136, 
-        MODULUS_ASSIGN = 137,
-        BITWISE_AND_ASSIGN = 138, 
-        BITWISE_OR_ASSIGN = 139, 
-        BITWISE_XOR_ASSIGN = 140, 
-        LSHIFT_ASSIGN = 196, // Triple
-        RSHIFT_ASSIGN = 197, // Triple
-        COND_AND = 141, 
-        COND_OR = 142, 
-        COND_IMPLICATION = 143, 
-        COND_EQUIVALENCE = 198, // Triple
+        BITWISE_XNOR = 130, // ~^
+        LSHIFT = 131, // <<
+        RSHIFT = 132, // >>
+        ADDITION_ASSIGN = 133, // += 
+        SUBTRACTION_ASSIGN = 134, // -=
+        MULTIPLICATION_ASSIGN = 135, // *=
+        DIVISION_ASSIGN = 136, // /=
+        MODULUS_ASSIGN = 137, // %=
+        BITWISE_AND_ASSIGN = 138,  // &=
+        BITWISE_OR_ASSIGN = 139, // |=
+        BITWISE_XOR_ASSIGN = 140, // ^=
+        LSHIFT_ASSIGN = 196, // <<=
+        RSHIFT_ASSIGN = 197, // >>=
+        COND_AND = 141, // &&
+        COND_OR = 142, // ||
+        COND_IMPLICATION = 143, // ->
+        COND_EQUIVALENCE = 198, // <->
         LESS = '<', 
         GREATER = '>', 
-        LESS_EQUAL = 144, 
-        GREATER_EQUAL = 145, 
-        EQUAL = 146, 
-        NOT_EQUAL = 147,
-        INCREMENT = 148, 
-        DECREMENT = 149, 
+        LESS_EQUAL = 144, // <=
+        GREATER_EQUAL = 145, // >=
+        EQUAL = 146, // ==
+        NOT_EQUAL = 147, // !=
+        INCREMENT = 148, // ++
+        DECREMENT = 149, // --
         INVERT = '~', 
         BANG = '!',
         LPAREN = '(', 
@@ -69,7 +69,7 @@ namespace Quark {
         COLON = ':',
         DOT = '.',
         COMMA = ',',
-        DOUBLE_COLON = 150, 
+        DOUBLE_COLON = 150, // ::
         SEMICOLON = ';',
         // Unsupported/unused symbols
         DOLLAR = '$',
@@ -78,8 +78,8 @@ namespace Quark {
         AT = '@',
         BACKSLASH = '\\',
         // Comment Symbols
-        LINE_COMMENT = 151,
-        BLOCK_COMMENT = 152,
+        LINE_COMMENT = 151, // //
+        BLOCK_COMMENT = 152, // /*
         // Empty symbol
         WHITESPACE = ' '
     };
@@ -131,6 +131,16 @@ namespace Quark {
 
         bool is_eof() {
             return ctype == QuarkCharacterType::CHAR_EOF;
+        }
+
+        unsigned int decode_base() {
+            switch (c) {
+                case 'b': return 2;
+                case 'o': return 8;
+                case 'd': return 10;
+                case 'h': return 16;
+                default: return 0;
+            }
         }
 
         int get_numeric_value(int base);

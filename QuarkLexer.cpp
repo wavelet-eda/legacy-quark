@@ -9,16 +9,6 @@
 
 using namespace Quark;
 
-unsigned int decode_base(char base_char) {
-    switch (base_char) {
-        case 'b': return 2;
-        case 'o': return 8;
-        case 'd': return 10;
-        case 'h': return 16;
-        default: return 0;
-    }
-}
-
 bool is_operator_single(QuarkSymbol sym) {
     return (uint8_t) sym >= 32 and (uint8_t) sym < 128;
 }
@@ -31,6 +21,20 @@ bool is_operator_triple(QuarkSymbol sym) {
     return (uint8_t) sym >= 196;
 }
 
+struct double_operator_t {
+    char second;
+    QuarkSymbol result;
+};
+
+struct triple_operator_t {
+    char second, third;
+    QuarkSymbol result;
+};
+
+bool OPERATOR_TABLE_INIT = false;
+double_operator_t DOUBLE_OPERATOR_TABLE [256][3];
+triple_operator_t TRIPLE_OPERATOR_TABLE [256][2];
+
 QuarkSymbol get_double_symbol(QuarkSymbol first_op, QuarkSymbol second_op) {
     if (first_op == QuarkSymbol::WHITESPACE or 
             second_op == QuarkSymbol::WHITESPACE)
@@ -40,80 +44,16 @@ QuarkSymbol get_double_symbol(QuarkSymbol first_op, QuarkSymbol second_op) {
             not is_operator_single(second_op))
         throw QuarkLexerException("Concatenating non-single character operators!");
 
-    switch (first_op) {
-        case QuarkSymbol::ASSIGN:
-            return (second_op == QuarkSymbol::ASSIGN) ?
-                    QuarkSymbol::EQUAL : QuarkSymbol::WHITESPACE;
-        case QuarkSymbol::ADDITION:
-            switch (second_op) {
-                case QuarkSymbol::ADDITION: return QuarkSymbol::INCREMENT;
-                case QuarkSymbol::ASSIGN: return QuarkSymbol::ADDITION_ASSIGN;
-                default: return QuarkSymbol::WHITESPACE;
-            }
-        case QuarkSymbol::SUBTRACTION:
-            switch (second_op) {
-                case QuarkSymbol::SUBTRACTION: return QuarkSymbol::DECREMENT;
-                case QuarkSymbol::ASSIGN: return QuarkSymbol::SUBTRACTION_ASSIGN;
-                case QuarkSymbol::GREATER: return QuarkSymbol::COND_IMPLICATION;
-                default: return QuarkSymbol::WHITESPACE;
-            }
-        case QuarkSymbol::MULTIPLICATION:
-            return (second_op == QuarkSymbol::ASSIGN) ?
-                    QuarkSymbol::MULTIPLICATION_ASSIGN : QuarkSymbol::WHITESPACE;
-        case QuarkSymbol::DIVISION:
-            switch (second_op) {
-                case QuarkSymbol::ASSIGN: return QuarkSymbol::DIVISION_ASSIGN;
-                case QuarkSymbol::DIVISION: return QuarkSymbol::LINE_COMMENT;
-                case QuarkSymbol::MULTIPLICATION: return QuarkSymbol::BLOCK_COMMENT;
-                default: return QuarkSymbol::WHITESPACE;
-            }
-        case QuarkSymbol::MODULUS:
-            return (second_op == QuarkSymbol::ASSIGN) ?
-                    QuarkSymbol::MODULUS_ASSIGN : QuarkSymbol::WHITESPACE;
-        case QuarkSymbol::BITWISE_AND:
-            switch (second_op) {
-                case QuarkSymbol::BITWISE_AND: return QuarkSymbol::COND_AND;
-                case QuarkSymbol::ASSIGN: return QuarkSymbol::BITWISE_AND_ASSIGN;
-                default: return QuarkSymbol::WHITESPACE;
-            }
-        case QuarkSymbol::BITWISE_OR:
-            switch (second_op) {
-                case QuarkSymbol::BITWISE_OR: return QuarkSymbol::COND_OR;
-                case QuarkSymbol::ASSIGN: return QuarkSymbol::BITWISE_OR_ASSIGN;
-                default: return QuarkSymbol::WHITESPACE;
-            }
-        case QuarkSymbol::BITWISE_XOR:
-            switch (second_op) {
-                case QuarkSymbol::ASSIGN: return QuarkSymbol::BITWISE_XOR_ASSIGN;
-                default: return QuarkSymbol::WHITESPACE;
-            }
-        case QuarkSymbol::LESS:
-            switch (second_op) {
-                case QuarkSymbol::ASSIGN: return QuarkSymbol::LESS_EQUAL;
-                case QuarkSymbol::LESS: return QuarkSymbol::LSHIFT;
-                default: return QuarkSymbol::WHITESPACE;
-            }
-        case QuarkSymbol::GREATER:
-            switch (second_op) {
-                case QuarkSymbol::ASSIGN: return QuarkSymbol::GREATER_EQUAL;
-                case QuarkSymbol::GREATER: return QuarkSymbol::RSHIFT;
-                default: return QuarkSymbol::WHITESPACE;
-            }
-        case QuarkSymbol::INVERT:
-            switch (second_op) {
-                case QuarkSymbol::BITWISE_AND: return QuarkSymbol::BITWISE_NAND;
-                case QuarkSymbol::BITWISE_OR: return QuarkSymbol::BITWISE_NOR;
-                case QuarkSymbol::BITWISE_XOR: return QuarkSymbol::BITWISE_XNOR;
-                default: return QuarkSymbol::WHITESPACE;
-            }
-        case QuarkSymbol::BANG:
-            return (second_op == QuarkSymbol::ASSIGN) ?
-                    QuarkSymbol::NOT_EQUAL : QuarkSymbol::WHITESPACE;
-        case QuarkSymbol::COLON:
-            return (second_op == QuarkSymbol::COLON) ?
-                    QuarkSymbol::DOUBLE_COLON : QuarkSymbol::WHITESPACE;
-        default: return QuarkSymbol::WHITESPACE;
+    for (size_t j = 0; j < (sizeof(DOUBLE_OPERATOR_TABLE[0])/sizeof(double_operator_t)); j++) {
+        double_operator_t dt = DOUBLE_OPERATOR_TABLE[(char)first_op][j];
+        if (dt.second == (char) second_op) {
+            return dt.result;
+        } else if (dt.second == 0) {
+            return QuarkSymbol::WHITESPACE;
+        }
     }
+
+    return QuarkSymbol::WHITESPACE;
 }
 
 QuarkSymbol get_triple_symbol(QuarkSymbol first_op, QuarkSymbol second_op, QuarkSymbol third_op) {
@@ -127,32 +67,66 @@ QuarkSymbol get_triple_symbol(QuarkSymbol first_op, QuarkSymbol second_op, Quark
             not is_operator_single(third_op))
         throw QuarkLexerException("Concatenating non-single character operators!");
 
-    if (first_op == QuarkSymbol::LESS) {
-        if (second_op == QuarkSymbol::LESS) {
-            if (third_op == QuarkSymbol::ASSIGN) {
-                return QuarkSymbol::LSHIFT_ASSIGN;
-            }
-        } else if (second_op == QuarkSymbol::SUBTRACTION) {
-            if (third_op == QuarkSymbol::GREATER) {
-                return QuarkSymbol::COND_EQUIVALENCE;
-            }
-        }
-    } else if (first_op == QuarkSymbol::GREATER) {
-        if (second_op == QuarkSymbol::LESS) {
-            if (third_op == QuarkSymbol::ASSIGN) {
-                return QuarkSymbol::RSHIFT_ASSIGN;
-            }
+    for (size_t j = 0; j < (sizeof(TRIPLE_OPERATOR_TABLE[0])/sizeof(triple_operator_t)); j++) {
+        triple_operator_t tt = TRIPLE_OPERATOR_TABLE[(char)first_op][j];
+        if (tt.second == (char) second_op and tt.third == (char) third_op) {
+            return tt.result;
+        } else if (tt.second == 0) {
+            return QuarkSymbol::WHITESPACE;
         }
     }
+
     return QuarkSymbol::WHITESPACE;
 }
 
 QuarkLexer::QuarkLexer(std::istream& in) : in(in) {
 
-    // Initialize keyword lookup
-    for (size_t i = 0; i < (sizeof(QUARK_KEYWORDS)/sizeof(QUARK_KEYWORDS[0])); i++) {
-        keyword_lookup.insert(QUARK_KEYWORDS[i]);
+    // Initialize operator lookup
+    if (not OPERATOR_TABLE_INIT) {
+        OPERATOR_TABLE_INIT = true;
+
+        for (size_t i = 0; i < 256; i++) {
+            for (size_t j = 0; j < (sizeof(DOUBLE_OPERATOR_TABLE[0])/sizeof(double_operator_t)); j++) {
+                DOUBLE_OPERATOR_TABLE[i][j] = {0, QuarkSymbol::WHITESPACE};
+            }
+
+            for (size_t j = 0; j < (sizeof(TRIPLE_OPERATOR_TABLE[0])/sizeof(triple_operator_t)); j++) {
+                TRIPLE_OPERATOR_TABLE[i][j] = {0, 0, QuarkSymbol::WHITESPACE};
+            }
+        }
+
+        DOUBLE_OPERATOR_TABLE['='][0] = {'=', QuarkSymbol::EQUAL};
+        DOUBLE_OPERATOR_TABLE['+'][0] = {'=', QuarkSymbol::ADDITION_ASSIGN};
+        DOUBLE_OPERATOR_TABLE['+'][1] = {'+', QuarkSymbol::INCREMENT};
+        DOUBLE_OPERATOR_TABLE['-'][0] = {'=', QuarkSymbol::SUBTRACTION_ASSIGN};
+        DOUBLE_OPERATOR_TABLE['-'][1] = {'-', QuarkSymbol::DECREMENT};
+        DOUBLE_OPERATOR_TABLE['-'][2] = {'>', QuarkSymbol::COND_IMPLICATION};
+        DOUBLE_OPERATOR_TABLE['*'][0] = {'=', QuarkSymbol::MULTIPLICATION_ASSIGN};
+        DOUBLE_OPERATOR_TABLE['/'][0] = {'=', QuarkSymbol::DIVISION_ASSIGN};
+        DOUBLE_OPERATOR_TABLE['/'][1] = {'/', QuarkSymbol::LINE_COMMENT};
+        DOUBLE_OPERATOR_TABLE['/'][2] = {'*', QuarkSymbol::BLOCK_COMMENT};
+        DOUBLE_OPERATOR_TABLE['%'][0] = {'=', QuarkSymbol::MODULUS_ASSIGN};
+        DOUBLE_OPERATOR_TABLE['&'][0] = {'=', QuarkSymbol::BITWISE_AND_ASSIGN};
+        DOUBLE_OPERATOR_TABLE['&'][1] = {'&', QuarkSymbol::COND_AND};
+        DOUBLE_OPERATOR_TABLE['|'][0] = {'=', QuarkSymbol::BITWISE_OR_ASSIGN};
+        DOUBLE_OPERATOR_TABLE['|'][1] = {'|', QuarkSymbol::COND_OR};
+        DOUBLE_OPERATOR_TABLE['^'][0] = {'=', QuarkSymbol::BITWISE_XOR_ASSIGN};
+        DOUBLE_OPERATOR_TABLE['<'][0] = {'=', QuarkSymbol::LESS_EQUAL};
+        DOUBLE_OPERATOR_TABLE['<'][1] = {'<', QuarkSymbol::LSHIFT};
+        DOUBLE_OPERATOR_TABLE['>'][0] = {'=', QuarkSymbol::GREATER_EQUAL};
+        DOUBLE_OPERATOR_TABLE['>'][1] = {'>', QuarkSymbol::RSHIFT};
+        DOUBLE_OPERATOR_TABLE['!'][0] = {'=', QuarkSymbol::NOT_EQUAL};
+        DOUBLE_OPERATOR_TABLE['~'][0] = {'&', QuarkSymbol::BITWISE_NAND};
+        DOUBLE_OPERATOR_TABLE['~'][1] = {'|', QuarkSymbol::BITWISE_NOR};
+        DOUBLE_OPERATOR_TABLE['~'][2] = {'^', QuarkSymbol::BITWISE_XNOR};
+        DOUBLE_OPERATOR_TABLE[':'][0] = {':', QuarkSymbol::DOUBLE_COLON};
+
+        TRIPLE_OPERATOR_TABLE['<'][0] = {'<', '=', QuarkSymbol::LSHIFT_ASSIGN};
+        TRIPLE_OPERATOR_TABLE['<'][1] = {'-', '>', QuarkSymbol::COND_EQUIVALENCE};
+        TRIPLE_OPERATOR_TABLE['>'][0] = {'>', '=', QuarkSymbol::RSHIFT_ASSIGN};
     }
+
+    keyword_lookup = get_quark_keywords();
 }
 
 void QuarkLexer::process_single_quote(std::function<void(QuarkToken)> token_parser,
@@ -161,7 +135,7 @@ void QuarkLexer::process_single_quote(std::function<void(QuarkToken)> token_pars
     if (qc.is_line_finish())
         throw QuarkLexerException("EOF or new-line found during character or number!", 
                 get_current_line(), get_current_column() - 1);
-    unsigned int number_base = decode_base(qc.get_char());
+    unsigned int number_base = qc.decode_base();
 
     if (qc.get_char() == '\\') { // Escaped character
         
@@ -221,10 +195,10 @@ void QuarkLexer::process_number(std::function<void(QuarkToken)> token_parser,
     
     if (qc.get_char() == '\'') {
         qc = get_next_character();
-        unsigned int number_base = decode_base(qc.get_char());
+        unsigned int number_base = qc.decode_base();
         if (qc.get_char() == 's') {
             qc = get_next_character();
-            number_base = decode_base(qc.get_char());
+            number_base = qc.decode_base();
             if (number_base > 0) {
                 num.convert_fixed_width(number_base, true);
             } else {
@@ -306,6 +280,7 @@ void QuarkLexer::process_identifier(std::function<void(QuarkToken)> token_parser
     }
 }
 
+// TODO: Enforce spaces between distinct operators (not needed operators and parens, brackets, etc.)
 void QuarkLexer::process_symbol(std::function<void(QuarkToken)> token_parser,
         size_t line, size_t column, QuarkCharacter first_char) {
     QuarkCharacter second_char = get_next_character(false);
@@ -445,73 +420,71 @@ bool QuarkLexer::process(std::function<void(QuarkToken)> token_parser) {
     return true;
 }
 
+ssize_t validate_utf8_string(std::string s) {
+    for (size_t i = 0; i < s.length(); i++) {
+        if ((((uint8_t)s[i]) >> 5) == 6) { // Starts two-byte UTF-8 character
+            if ((i + 1) >= s.length()) return -(ssize_t)i;
+            if ((((uint8_t)s[++i]) >> 6) != 2) return -(ssize_t)i;
+        } else if ((((uint8_t)s[i]) >> 4) == 14) { // Starts three-byte UTF-8 character
+            if ((i + 2) >= s.length()) return -(ssize_t)i;
+            if ((((uint8_t)s[++i]) >> 6) != 2) return -(ssize_t)i;
+            if ((((uint8_t)s[++i]) >> 6) != 2) return -(ssize_t)i;
+        } else if ((((uint8_t)s[i]) >> 3) == 30) { // Starts four-byte UTF-8 character
+            if ((i + 3) >= s.length()) return -(ssize_t)i;
+            if ((((uint8_t)s[++i]) >> 6) != 2) return -(ssize_t)i;
+            if ((((uint8_t)s[++i]) >> 6) != 2) return -(ssize_t)i;
+            if ((((uint8_t)s[++i]) >> 6) != 2) return -(ssize_t)i;
+        }
+    }
+    return 1;
+}
+
 QuarkCharacter QuarkLexer::get_next_character(bool enter_next_line) {
-    if (current_col >= current_line.length()) {
-        if (unlikely(utf_bytes_remaining)) {
-            throw QuarkLexerException("New-line or EOF encountered during multi-byte UTF-8 character!",
-                get_current_line(), get_current_column(), 
-                QuarkCharacter('\n', QuarkCharacterType::NEWLINE));
-        } else if (in.eof()) {
+    if (unlikely(current_col >= current_line.length())) {
+        if (in.eof()) {
             return QuarkCharacter(true); // Indicate character is EOF
         } else {
             if (not enter_next_line)
                 return QuarkCharacter(false);
             std::getline(in, current_line);
-            QuarkCharacter qc(false); // Indicate character is new-line
+
+            ssize_t utf8_validation = validate_utf8_string(current_line);
+            if (utf8_validation <= 0)
+                throw QuarkLexerException("Invalid UTF-8 line!", get_current_line() + 1, 
+                        -utf8_validation, QuarkCharacter(0, QuarkCharacterType::UNDEF));
+
             current_col = 0;
             current_row++;
-            return qc;
+
+            return QuarkCharacter(false); // Indicate character is new-line
         }
     } else {
         uint8_t c = current_line[current_col];
-        if (unlikely(utf_bytes_remaining)) {
-            if ((c >> 6) != 2)
-                throw QuarkLexerException("Invalid n-th byte for multi-byte UTF-8 character!", 
-                        get_current_line(), get_current_column(),
-                        QuarkCharacter('\n', QuarkCharacterType::UNDEF));
-            utf_bytes_remaining--;
-            current_col++;
-            return QuarkCharacter(c, QuarkCharacterType::ALPHA);
-        } else {
-            if (likely(c < QUARK_ASCII_DEL)) { // Normal ASCII characters
-                if (c == ' ' or c == '\t') {
-                    current_col++;
-                    return QuarkCharacter(c, QuarkCharacterType::WHITESPACE);
-                } else if (c <= ' ') {
-                    throw QuarkLexerException("Invalid control character found!",
-                            get_current_line(), get_current_column(),
-                            QuarkCharacter(c, QuarkCharacterType::UNDEF));
-                } else if (c >= '0' and c <= '9') { // Number
-                    current_col++;
-                    return QuarkCharacter(c, QuarkCharacterType::NUMERAL);
-                } else if ((c >= 'a' and c <= 'z') || (c >= 'A' and c <= 'Z') || (c == '_')) { // Letter
-                    current_col++;
-                    return QuarkCharacter(c, QuarkCharacterType::ALPHA);
-                } else { // Symbol
-                    current_col++;
-                    return QuarkCharacter(c, QuarkCharacterType::SYMBOL);
-                }
-            } else if (c == QUARK_ASCII_DEL) {
+        if (likely(c < QUARK_ASCII_DEL)) { // Normal ASCII characters
+            if (c == ' ' or c == '\t') {
+                current_col++;
+                return QuarkCharacter(c, QuarkCharacterType::WHITESPACE);
+            } else if (c <= ' ') {
                 throw QuarkLexerException("Invalid control character found!",
                         get_current_line(), get_current_column(),
                         QuarkCharacter(c, QuarkCharacterType::UNDEF));
-            } else if ((c >> 5) == 6) { // Starts two-byte UTF-8 character
-                utf_bytes_remaining = 1;
+            } else if (c >= '0' and c <= '9') { // Number
+                current_col++;
+                return QuarkCharacter(c, QuarkCharacterType::NUMERAL);
+            } else if ((c >= 'a' and c <= 'z') || (c >= 'A' and c <= 'Z') || (c == '_')) { // Letter
                 current_col++;
                 return QuarkCharacter(c, QuarkCharacterType::ALPHA);
-            } else if ((c >> 4) == 14) { // Starts three-byte UTF-8 character
-                utf_bytes_remaining = 2;
+            } else { // Symbol
                 current_col++;
-                return QuarkCharacter(c, QuarkCharacterType::ALPHA);
-            } else if ((c >> 3) == 30) { // Starts four-byte UTF-8 character
-                utf_bytes_remaining = 3;
-                current_col++;
-                return QuarkCharacter(c, QuarkCharacterType::ALPHA);
-            } else {
-                throw QuarkLexerException("Non-UTF8 character encountered!",
-                        get_current_line(), get_current_column(),
-                        QuarkCharacter(c, QuarkCharacterType::UNDEF));
+                return QuarkCharacter(c, QuarkCharacterType::SYMBOL);
             }
+        } else if (c == QUARK_ASCII_DEL) {
+            throw QuarkLexerException("Invalid control character found!",
+                    get_current_line(), get_current_column(),
+                    QuarkCharacter(c, QuarkCharacterType::UNDEF));
+        } else { // c >= 128, must be UTF-8
+            current_col++;
+            return QuarkCharacter(c, QuarkCharacterType::ALPHA);
         }
     }
 }
@@ -558,7 +531,6 @@ void QuarkLexer::lex(std::function<void(QuarkToken)> token_parser) {
 
     current_row = -1;
     current_col = 0;
-    utf_bytes_remaining = 0;
 
     while (process(token_parser)); // Process all bytes in the file
 }

@@ -2,15 +2,23 @@
 
 using namespace Quark;
 
-// const std::string QUARK_KEYWORDS [33] = {
-//     "quark", "import", "module", "parameter", "fixed", "input", "output", 
-//     "reg", "latch", "future", "function", "return", 
-//     "bit", "signed", "unsigned", "safe", 
-//     "overflow", "concat", "clog2", "width", "length", "resize", "cast", 
-//     "struct", "typedef", "enum", 
-//     "channel", "interface", 
-//     "if", "else", "for", "break", "continue"
-// };
+const std::string QUARK_KEYWORDS [34] = {
+    "quark", "import", "module", "parameter", "fixed", "input", "output", 
+    "reg", "latch", "future", "function", "return", 
+    "bit", "signed", "unsigned", "safe", 
+    "overflow", "concat", "clog2", "width", "length", "resize", "cast", 
+    "struct", "typedef", "enum", "strict",
+    "channel", "interface", 
+    "if", "else", "for", "break", "continue"
+};
+
+std::set<std::string> Quark::get_quark_keywords() {
+    std::set<std::string> keyword_lookup;
+    for (size_t i = 0; i < (sizeof(QUARK_KEYWORDS)/sizeof(QUARK_KEYWORDS[0])); i++) {
+        keyword_lookup.insert(QUARK_KEYWORDS[i]);
+    }
+    return keyword_lookup;
+}
 
 char QuarkCharacter::get_escaped_char() {
     switch (c) {
