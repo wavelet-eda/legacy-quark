@@ -159,16 +159,13 @@ void QuarkLexer::process_single_quote(std::function<void(QuarkToken)> token_pars
         if (qc.get_char() == '\'') { // Normal character
             token_parser(QuarkToken(line, column, QuarkNumber(2, 8, qc.get_char())));
         } else {
+            
             QuarkNumber num((int) number_base);
-            while (not qc.is_whitespace() and not qc.is_symbol()) {
-                num.insert_digit(qc);
-                qc = get_next_character();
-            }
+            QuarkNumber num_mask = num;
 
-            if (not qc.is_whitespace())
-                reuse_character();
-
-            token_parser(QuarkToken(line, column, num));
+            reuse_character();
+            process_integer_literal(num, num_mask);
+            token_parser(QuarkToken(line, column, num, num_mask));
         }
     } else {
         expect_character('\'');
@@ -179,7 +176,7 @@ void QuarkLexer::process_single_quote(std::function<void(QuarkToken)> token_pars
 void QuarkLexer::process_number(std::function<void(QuarkToken)> token_parser,
         size_t line, size_t column, QuarkCharacter initial_numeral) {
 
-    QuarkNumber num;
+    QuarkNumber num, num_mask;
 
     QuarkCharacter qc = get_next_character();
     
@@ -212,20 +209,61 @@ void QuarkLexer::process_number(std::function<void(QuarkToken)> token_parser,
                     get_current_line(), get_current_column() - 1);
         }
 
+        process_integer_literal(num, num_mask);
+
+    } else if (qc.get_char() == '.') {
+
+        float f = num.num.get_ui();
+        double d = num.num.get_ui();
+        int divider = 10;
+
         qc = get_next_character();
-        while (not qc.is_whitespace() and not qc.is_symbol()) {
-            num.insert_digit(qc);
+        while (qc.get_type() == QuarkCharacterType::NUMERAL) {
+            f += (float) qc.get_numeric_value(10) / divider;
+            d += (double) qc.get_numeric_value(10) / divider;
+            divider *= 10;
             qc = get_next_character();
         }
 
-        if (not qc.is_whitespace())
-            reuse_character();
+        if (qc.get_char() == 'd') {
+            token_parser(QuarkToken(line, column, d));
+            return;
+        } else if (qc.get_char() == 'f') {
+            token_parser(QuarkToken(line, column, f));
+            return;
+        } else {
+            throw QuarkLexerException("Expecting a float (f) or double (d) qualifier after floating point number!",
+                    get_current_line(), get_current_column() - 1);
+        }
 
     } else if (not qc.is_whitespace()) {
         reuse_character();
     }
 
-    token_parser(QuarkToken(line, column, num));
+    token_parser(QuarkToken(line, column, num, num_mask));
+}
+
+void QuarkLexer::process_integer_literal(QuarkNumber &num, QuarkNumber &mask) {
+    mask = num;
+
+    QuarkCharacter qc = get_next_character();
+    while (not qc.is_whitespace() and (not qc.is_symbol() or (qc.get_char() == '?'))) {
+        if (qc.get_char() == '?') {
+            num.insert_digit(0);
+            mask.insert_digit(mask.base - 1);
+        } else {
+            num.insert_digit(qc);
+            mask.insert_digit(0);
+        }
+        qc = get_next_character();
+    }
+
+    if (not qc.is_whitespace())
+        reuse_character();
+
+    if (mask.num.get_ui() != 0 and num.base == 10)
+        throw QuarkLexerException("Cannot provide wildcard mask for base-10 number!",
+                get_current_line(), get_current_column() - 1);
 }
 
 void QuarkLexer::process_string(std::function<void(QuarkToken)> token_parser,

@@ -60,6 +60,8 @@ namespace Quark {
 
         size_t add_identifier(std::string new_identifier);
 
+        void process_integer_literal(QuarkNumber &num, QuarkNumber &mask);
+
         bool process(std::function<void(QuarkToken)> token_parser);
         void process_single_quote(std::function<void(QuarkToken)> token_parser,
                 size_t line, size_t column);

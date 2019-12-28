@@ -202,6 +202,17 @@ namespace Quark {
                 throw QuarkException("Number larger than defined bit-width!", qc);
         }
 
+        void insert_digit(unsigned int digit) {
+            if (digit >= base)
+                throw QuarkException("Invalid digit used in number!", QuarkCharacter());
+            
+            num *= base;
+            num += digit;
+
+            if (not is_ambiguous and mpz_sizeinbase(num.get_mpz_t(), 2) > width)
+                throw QuarkException("Number larger than defined bit-width!", QuarkCharacter());
+        }
+
         void convert_fixed_width(unsigned int base, bool is_signed) {
             if (not num.fits_uint_p())
                 throw QuarkException("Constant width takes more than 32-bits!");
@@ -221,23 +232,48 @@ namespace Quark {
     enum class QuarkTokenType : uint8_t {
         KEYWORD,
         IDENTIFIER,
-        NUMBER,
         SYMBOL,
         STRING,
-        DOC_COMMENT
+        DOC_COMMENT,
+        NUMBER,
+        NUMBER_WILDCARD,
+        NUMBER_FLOAT,
+        NUMBER_DOUBLE
     };
 
     struct QuarkToken {
         QuarkTokenType type;
         size_t line, col;
         QuarkNumber num;
+        QuarkNumber num_mask;
         QuarkSymbol symbol;
         size_t id;
         std::string str;
+        float f;
+        double d;
 
         QuarkToken(size_t line, size_t col, QuarkNumber num) :
                 line(line), col(col),
                 type(QuarkTokenType::NUMBER), num(num) {}
+
+        QuarkToken(size_t line, size_t col, QuarkNumber num, QuarkNumber nm) :
+                line(line), col(col), num(num) {
+            if (nm.num.get_ui() != 0) {
+                num_mask = nm;
+                type = QuarkTokenType::NUMBER_WILDCARD;
+            } else {
+                num_mask = 0;
+                type = QuarkTokenType::NUMBER;
+            }
+        }
+
+        QuarkToken(size_t line, size_t col, float f) :
+                line(line), col(col),
+                type(QuarkTokenType::NUMBER_FLOAT), f(f) {}
+
+        QuarkToken(size_t line, size_t col, double d) :
+                line(line), col(col),
+                type(QuarkTokenType::NUMBER_DOUBLE), d(d) {}
 
         QuarkToken(size_t line, size_t col, QuarkSymbol symbol) :
                 line(line), col(col),

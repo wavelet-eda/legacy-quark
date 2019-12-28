@@ -76,8 +76,24 @@ int main(int argc, char const *argv[])
                         ", Value: " << token.num.num.get_str() <<  
                         '\n';
                 break;
+            case QuarkTokenType::NUMBER_WILDCARD:
+                std::cout << "Number Wildcard:: Base: " << token.num.base << 
+                        ", Signed: " << token.num.is_signed << 
+                        ", Ambiguous: " << token.num.is_ambiguous <<
+                        ", Width: " << token.num.get_width() <<
+                        ", Value: " << token.num.num.get_str() <<
+                        ", Mask Width: " << token.num_mask.get_width() <<
+                        ", Mask Value: " << token.num_mask.num.get_str() <<
+                        '\n';
+                break;
+            case QuarkTokenType::NUMBER_FLOAT:
+                std::cout << "Float:: " << token.f << '\n';
+                break;
+            case QuarkTokenType::NUMBER_DOUBLE:
+                std::cout << "Double:: " << token.d << '\n';
+                break;
             case QuarkTokenType::SYMBOL:
-                std::cout << "Symbol:: " << get_symbol_str(token.symbol) << '\n';
+                std::cout << "Symbol:: " << (int) token.symbol << ", " << get_symbol_str(token.symbol) << '\n';
                 break;
             case QuarkTokenType::STRING:
                 std::cout << "String::" << '\n';
